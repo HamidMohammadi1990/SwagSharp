@@ -1,0 +1,6 @@
+@SwagSharp.Api_HostAddress = http://localhost:5271
+
+GET {{SwagSharp.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
