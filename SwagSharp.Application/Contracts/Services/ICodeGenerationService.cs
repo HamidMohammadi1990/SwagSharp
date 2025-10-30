@@ -2,5 +2,5 @@
 
 public interface ICodeGenerationService
 {
-    Task<string> GenerateAndReturnZipAsync(string swaggerJson);
+    Task<string> GenerateAsync(string swaggerJson);
 }

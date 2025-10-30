@@ -8,16 +8,10 @@ namespace SwagSharp.Application.Services.CodeGen;
 
 public class CodeGenerationService : ICodeGenerationService
 {
-    private readonly string _templatesPath;
-    private readonly string _outputRoot;
+    private readonly string _templatesPath = Path.Combine(Directory.GetCurrentDirectory(), "Templates");
+    private readonly string _outputRoot = Path.Combine(Path.GetTempPath(), "SwaggerCodeGenOutput");
 
-    public CodeGenerationService(string templatesPath)
-    {
-        _templatesPath = templatesPath;
-        _outputRoot = Path.Combine(Path.GetTempPath(), "SwaggerCodeGenOutput");
-    }
-
-    public async Task<string> GenerateAndReturnZipAsync(string swaggerJson)
+    public async Task<string> GenerateAsync(string swaggerJson)
     {
         if (Directory.Exists(_outputRoot))
             Directory.Delete(_outputRoot, true);
@@ -285,9 +279,9 @@ public class CodeGenerationService : ICodeGenerationService
         return "object";
     }
 
-    private string ToPascalCase(string input) =>
+    private static string ToPascalCase(string input) =>
         string.IsNullOrEmpty(input) ? input : char.ToUpperInvariant(input[0]) + input[1..];
 
-    private string ToCamelCase(string input) =>
+    private static string ToCamelCase(string input) =>
         string.IsNullOrEmpty(input) ? input : char.ToLowerInvariant(input[0]) + input[1..];
 }

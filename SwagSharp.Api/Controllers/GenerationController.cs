@@ -22,7 +22,7 @@ public class GenerationController(ICodeGenerationService codeGenerationService) 
 
         try
         {
-            var zipPath = await codeGenerationService.GenerateAndReturnZipAsync(swaggerJson);
+            var zipPath = await codeGenerationService.GenerateAsync(swaggerJson);
             var zipBytes = await System.IO.File.ReadAllBytesAsync(zipPath);
             var fileName = Path.GetFileName(zipPath);
 
