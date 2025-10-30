@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SwagSharp.Application\SwagSharp.Application.csproj" />
+  </ItemGroup>
+
 </Project>
