@@ -3,13 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.10.35122.118
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SwagSharp.Domain", "SwagSharp.Domain\SwagSharp.Domain.csproj", "{FAD6290A-1E74-495C-846E-8B4FDC464019}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SwagSharp.Domain", "SwagSharp.Domain\SwagSharp.Domain.csproj", "{FAD6290A-1E74-495C-846E-8B4FDC464019}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SwagSharp.Application", "SwagSharp.Application\SwagSharp.Application.csproj", "{91673BAB-2281-49E0-A9D1-9ED2982554A2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SwagSharp.Application", "SwagSharp.Application\SwagSharp.Application.csproj", "{91673BAB-2281-49E0-A9D1-9ED2982554A2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SwagSharp.Api", "SwagSharp.Api\SwagSharp.Api.csproj", "{1A979D1F-99DE-4697-860A-AF79B6707DD1}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SwagSharp.Infrastructure", "SwagSharp.Infrastructure\SwagSharp.Infrastructure.csproj", "{3C0BFDEB-303C-48AD-ACB4-FA2F796B983D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SwagSharp.Api", "SwagSharp.Api\SwagSharp.Api.csproj", "{1A979D1F-99DE-4697-860A-AF79B6707DD1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,10 +27,6 @@ Global
 		{1A979D1F-99DE-4697-860A-AF79B6707DD1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1A979D1F-99DE-4697-860A-AF79B6707DD1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1A979D1F-99DE-4697-860A-AF79B6707DD1}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3C0BFDEB-303C-48AD-ACB4-FA2F796B983D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3C0BFDEB-303C-48AD-ACB4-FA2F796B983D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3C0BFDEB-303C-48AD-ACB4-FA2F796B983D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3C0BFDEB-303C-48AD-ACB4-FA2F796B983D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

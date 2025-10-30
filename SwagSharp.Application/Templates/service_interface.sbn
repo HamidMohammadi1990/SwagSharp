@@ -1,0 +1,8 @@
+namespace {{ namespace_ }};
+
+public interface I{{ service_name }}
+{
+{{ for op in operations }}
+    Task<{{ op.responseType }}> {{ op.methodName }}Async({{ op.parameters }});
+{{ end }}
+}
