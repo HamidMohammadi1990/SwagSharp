@@ -2,5 +2,5 @@
 
 public interface ICodeGenerationService
 {
-    Task<string> GenerateAsync(string swaggerJson);
+    Task GenerateAsync(string swaggerJson);
 }
