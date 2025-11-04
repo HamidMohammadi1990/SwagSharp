@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Text.Json;
+using SwagSharp.Api.DTOs;
 using SwagSharp.Api.Contracts.Services;
 
 namespace SwagSharp.Api.Services;
@@ -87,25 +88,18 @@ public class ModelGeneratorService : IModelGeneratorService
 
     private string ExtractMainEntityName(string modelName)
     {
-        // لیست entityهای اصلی
         var mainEntities = new List<string>();
-
-        // شکستن نام به کلمات
         var words = SplitCamelCase(modelName);
 
         if (words.Count == 0)
             return "Common";
 
-        // پیدا کردن entity اصلی (اولین کلمه معنادار)
         foreach (var word in words)
         {
             if (word.Length > 2 && !IsCommonWord(word))
-            {
                 return word;
-            }
         }
 
-        // اگر entity اصلی پیدا نشد، از اولین کلمه استفاده کن
         return words.FirstOrDefault() ?? "Common";
     }
 
@@ -135,7 +129,7 @@ public class ModelGeneratorService : IModelGeneratorService
     private List<string> SplitCamelCase(string input)
     {
         if (string.IsNullOrEmpty(input))
-            return new List<string>();
+            return [];
 
         var words = new List<string>();
         var currentWord = new StringBuilder();
@@ -276,7 +270,6 @@ public class ModelGeneratorService : IModelGeneratorService
 
     private bool IsPropertyRequired(JsonElement property, string propertyName, JsonElement parentDefinition)
     {
-        // روش 1: بررسی آرایه required در parent object
         if (parentDefinition.TryGetProperty("required", out var requiredArray))
         {
             foreach (var requiredProp in requiredArray.EnumerateArray())
@@ -286,26 +279,21 @@ public class ModelGeneratorService : IModelGeneratorService
             }
         }
 
-        // روش 2: بررسی مستقیم required property
         if (property.TryGetProperty("required", out var requiredElement) &&
             requiredElement.ValueKind == JsonValueKind.True)
         {
             return true;
         }
 
-        // روش 3: بررسی nullable بودن
         if (property.TryGetProperty("nullable", out var nullableElement) &&
             nullableElement.ValueKind == JsonValueKind.True)
         {
             return false;
         }
 
-        // روش 4: برای value types، اگر nullable نباشند required هستند
         if (property.TryGetProperty("type", out var typeElement))
         {
             string type = typeElement.GetString();
-
-            // انواع value type که به صورت پیش‌فرض required هستند
             var nonNullableValueTypes = new HashSet<string> { "integer", "number", "boolean" };
 
             if (nonNullableValueTypes.Contains(type))
@@ -319,13 +307,7 @@ public class ModelGeneratorService : IModelGeneratorService
             }
         }
 
-        // روش 5: بررسی constraints
-        if (HasValidationConstraints(property))
-        {
-            return true;
-        }
-
-        return false;
+        return HasValidationConstraints(property);
     }
 
     private bool HasValidationConstraints(JsonElement property)
@@ -360,13 +342,10 @@ public class ModelGeneratorService : IModelGeneratorService
 
     private string GetSafePropertyName(string propertyName, string className, HashSet<string> usedNames)
     {
-        string pascalName = ToPascalCase(propertyName);
-
-        // اگر نام پراپرتی با نام کلاس یکی شد
+        string pascalName = ToPascalCase(propertyName);        
         if (pascalName == className || pascalName == SanitizeModelName(className))
             pascalName += "Value";
-
-        // اگر نام تکراری در همین کلاس وجود داشت
+        
         if (usedNames.Contains(pascalName))
         {
             int counter = 1;
@@ -482,61 +461,15 @@ public class ModelGeneratorService : IModelGeneratorService
 
     private string GetDescription(JsonElement element)
     {
-        if (element.TryGetProperty("description", out var descriptionElement))
-        {
+        if (element.TryGetProperty("description", out var descriptionElement))        
             return descriptionElement.GetString() ?? string.Empty;
-        }
+        
         return string.Empty;
     }
 
     private string GetDefaultValue(string type, JsonElement property, bool isRequired)
     {
         return isRequired ? " = default;" : "";
-
-        // اگر default value مشخص شده باشد
-        if (property.TryGetProperty("default", out var defaultElement))
-        {
-            //if (defaultElement.ValueKind == JsonValueKind.String)
-            //    return $" = \"{defaultElement.GetString()}\";";
-            //else if (defaultElement.ValueKind == JsonValueKind.True)
-            //    return " = true;";
-            //else if (defaultElement.ValueKind == JsonValueKind.False)
-            //    return " = false;";
-            //else if (defaultElement.ValueKind == JsonValueKind.Number)
-            //    return $" = {defaultElement.GetRawText()};";
-            //else if (defaultElement.ValueKind == JsonValueKind.Null)
-            //    return " = null;";
-
-            return " = default;";
-        }
-
-        // اگر required نباشد و value type باشد، default value قرار بده
-        if (!isRequired && IsValueType(type))
-        {
-            //return type switch
-            //{
-            //    "int" or "int?" => " = 0;",
-            //    "long" or "long?" => " = 0L;",
-            //    "decimal" or "decimal?" => " = 0m;",
-            //    "float" or "float?" => " = 0f;",
-            //    "double" or "double?" => " = 0d;",
-            //    "bool" or "bool?" => " = false;",
-            //    "DateTime" or "DateTime?" => " = default;",
-            //    _ => " = default;"
-            //};
-
-            return " = default;";
-        }
-
-        // برای reference types و nullable value types
-        if (type.StartsWith("List<") || type.StartsWith("Dictionary<"))
-            return " = [];";
-
-        // برای stringهای required
-        //if (type == "string" && isRequired)
-        //    return " = default;";
-
-        return "";
     }
 
     private string GetCSharpType(JsonElement property)
@@ -674,10 +607,4 @@ public class ModelGeneratorService : IModelGeneratorService
 
         return char.ToUpper(cleaned[0]) + cleaned[1..];
     }
-}
-
-public class ModelInfo
-{
-    public string Name { get; set; }
-    public JsonElement Definition { get; set; }
 }

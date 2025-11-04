@@ -219,7 +219,7 @@ public class ServiceGeneratorService : IServiceGeneratorService
             return operationId;
 
         int usingIndex = operationId.IndexOf("Using", StringComparison.OrdinalIgnoreCase);
-        return usingIndex >= 0 ? operationId.Substring(0, usingIndex) : operationId;
+        return usingIndex >= 0 ? operationId[..usingIndex] : operationId;
     }
 
     private string GenerateMethodImplementation(EndpointInfo endpoint)
