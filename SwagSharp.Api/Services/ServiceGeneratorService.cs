@@ -1,10 +1,10 @@
 ﻿using System.Text;
 using System.Text.Json;
-using SwagSharp.Application.DTOs;
+using SwagSharp.Api.DTOs;
 using System.Text.RegularExpressions;
-using SwagSharp.Application.Contracts.Services;
+using SwagSharp.Api.Contracts.Services;
 
-namespace SwagSharp.Application.Services;
+namespace SwagSharp.Api.Services;
 
 public class ServiceGeneratorService : IServiceGeneratorService
 {

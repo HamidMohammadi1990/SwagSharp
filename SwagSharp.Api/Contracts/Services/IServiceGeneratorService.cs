@@ -1,8 +1,8 @@
 ﻿using System.Text.Json;
 
-namespace SwagSharp.Application.Contracts.Services;
+namespace SwagSharp.Api.Contracts.Services;
 
-public interface IModelGeneratorService
+public interface IServiceGeneratorService
 {
     Task Generate(string outputPath, JsonDocument jsonDocument);
 }

@@ -1,4 +1,4 @@
-﻿namespace SwagSharp.Application.DTOs;
+﻿namespace SwagSharp.Api.DTOs;
 
 public class ParameterInfo
 {

@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using SwagSharp.Api.Extensions;
-using SwagSharp.Application.Contracts.Services;
+﻿using SwagSharp.Api.Extensions;
+using Microsoft.AspNetCore.Mvc;
+using SwagSharp.Api.Contracts.Services;
 
 namespace SwagSharp.Api.Controllers;
 

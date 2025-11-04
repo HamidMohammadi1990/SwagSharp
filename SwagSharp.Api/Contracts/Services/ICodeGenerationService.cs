@@ -1,4 +1,4 @@
-﻿namespace SwagSharp.Application.Contracts.Services;
+﻿namespace SwagSharp.Api.Contracts.Services;
 
 public interface ICodeGenerationService
 {

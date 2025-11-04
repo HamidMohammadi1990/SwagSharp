@@ -1,5 +1,5 @@
-using SwagSharp.Application.Services;
-using SwagSharp.Application.Contracts.Services;
+using SwagSharp.Api.Services;
+using SwagSharp.Api.Contracts.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
