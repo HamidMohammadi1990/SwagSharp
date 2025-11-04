@@ -10,6 +10,7 @@ public class CodeGenerationService(IModelGeneratorService modelGeneratorService,
         var jsonDocument = JsonDocument.Parse(swaggerJson);
 
         var currentDirectory = Directory.GetCurrentDirectory();
+
         var modelsDirectory = Path.Combine(currentDirectory, "Models");
         await modelGeneratorService.Generate(modelsDirectory, jsonDocument);
 

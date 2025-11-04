@@ -2,6 +2,7 @@
 using System.Text.Json;
 using SwagSharp.Domain.DTOs;
 using SwagSharp.Application.Contracts.Services;
+using System.Text.RegularExpressions;
 
 namespace SwagSharp.Application.Services;
 
@@ -104,13 +105,14 @@ public class ServiceGeneratorService : IServiceGeneratorService
         sb.AppendLine("using GeneratedCode.Models;");
         sb.AppendLine();
 
-        string interfaceName = $"I{ToValidClassName(serviceName)}Service";
+        serviceName = CleanInterfaceNameAdvanced(ToValidClassName(serviceName));
+        string interfaceName = $"I{serviceName}Service";
         string interfacePath = Path.Combine(outputPath, "Interfaces");
         Directory.CreateDirectory(interfacePath);
 
         sb.AppendLine("namespace GeneratedCode.Services.Interfaces;");
         sb.AppendLine();
-        sb.AppendLine(" /// <summary>");
+        sb.AppendLine("/// <summary>");
         sb.AppendLine($"/// Service interface for {serviceName} operations");
         sb.AppendLine("/// </summary>");
         sb.AppendLine($"public interface {interfaceName}");
@@ -123,9 +125,9 @@ public class ServiceGeneratorService : IServiceGeneratorService
             {
                 if (!string.IsNullOrEmpty(endpoint.Summary))
                 {
-                    sb.AppendLine("     /// <summary>");
+                    sb.AppendLine("    /// <summary>");
                     sb.AppendLine($"    /// {endpoint.Summary}");
-                    sb.AppendLine("     /// </summary>");
+                    sb.AppendLine("    /// </summary>");
                 }
 
                 sb.AppendLine($"    {methodSignature};");
@@ -134,6 +136,8 @@ public class ServiceGeneratorService : IServiceGeneratorService
                     sb.AppendLine();
             }
         }
+
+        sb.Append('}');
 
         string filePath = Path.Combine(interfacePath, $"{interfaceName}.cs");
         File.WriteAllText(filePath, sb.ToString(), Encoding.UTF8);
@@ -149,10 +153,9 @@ public class ServiceGeneratorService : IServiceGeneratorService
         sb.AppendLine("using System.Threading.Tasks;");
         sb.AppendLine("using GeneratedCode.Models;");
         sb.AppendLine("using GeneratedCode.Services.Interfaces;");
-        sb.AppendLine("using GeneratedCode.Clients;");
         sb.AppendLine();
 
-        string className = $"{ToValidClassName(serviceName)}Service";
+        string className = $"{CleanInterfaceNameAdvanced(ToValidClassName(serviceName))}Service";
         string interfaceName = $"I{className}";
         string implementationPath = Path.Combine(outputPath, "Implementations");
         Directory.CreateDirectory(implementationPath);
@@ -164,13 +167,6 @@ public class ServiceGeneratorService : IServiceGeneratorService
         sb.AppendLine("/// </summary>");
         sb.AppendLine($"public class {className} : {interfaceName}");
         sb.AppendLine("{");
-        sb.AppendLine("private readonly IApiClient _apiClient;");
-        sb.AppendLine();
-        sb.AppendLine($"    public {className}(IApiClient apiClient)");
-        sb.AppendLine("     {");
-        sb.AppendLine("          _apiClient = apiClient;");
-        sb.AppendLine("     }");
-        sb.AppendLine();
 
         foreach (var endpoint in endpoints)
         {
@@ -230,9 +226,14 @@ public class ServiceGeneratorService : IServiceGeneratorService
     {
         try
         {
-            var parameters = endpoint.Parameters.Select(p => ToCamelCase(p.Name)).ToList();
-            string parameterString = string.Join(", ", parameters);
+            var parameters = endpoint.Parameters.Select(p =>
+            {
+                string paramType = GetParameterTypeForSignature(p);
+                return $"{paramType} {ToCamelCase(p.Name)}";
+            }).ToList();
 
+            string parameterString = string.Join(", ", endpoint.Parameters.Select(p => ToCamelCase(p.Name)).ToList());
+            string parameterWithTypeString = string.Join(", ", parameters);
             string returnType = endpoint.ReturnType == "void" ? "Task" : $"Task<{endpoint.ReturnType}>";
 
             var sb = new StringBuilder();
@@ -240,24 +241,24 @@ public class ServiceGeneratorService : IServiceGeneratorService
 
             if (!string.IsNullOrEmpty(endpoint.Summary))
             {
-                sb.AppendLine("        /// <summary>");
-                sb.AppendLine($"        /// {endpoint.Summary}");
-                sb.AppendLine("        /// </summary>");
+                sb.AppendLine("/// <summary>");
+                sb.AppendLine($"    /// {endpoint.Summary}");
+                sb.AppendLine("    /// </summary>");
             }
 
-            sb.AppendLine($"        public async {returnType} {cleanOperationId}Async({parameterString})");
-            sb.AppendLine("        {");
+            sb.AppendLine($"    public async {returnType} {cleanOperationId}Async({parameterWithTypeString})");
+            sb.AppendLine("    {");
 
             if (endpoint.ReturnType != "void")
             {
-                sb.AppendLine($"            return await _apiClient.{cleanOperationId}Async({parameterString});");
+                sb.AppendLine($"        return await _apiClient.{cleanOperationId}Async({parameterString});");
             }
             else
             {
-                sb.AppendLine($"            await _apiClient.{cleanOperationId}Async({parameterString});");
+                sb.AppendLine($"        await _apiClient.{cleanOperationId}Async({parameterString});");
             }
 
-            sb.Append("        }");
+            sb.Append("    }");
 
             return sb.ToString();
         }
@@ -405,5 +406,28 @@ public class ServiceGeneratorService : IServiceGeneratorService
             return "param";
 
         return char.ToLower(input[0]) + input.Substring(1);
+    }
+
+    public static string CleanInterfaceNameAdvanced(string interfaceName, bool removeResource = true, bool removeVersion = true)
+    {
+        if (string.IsNullOrEmpty(interfaceName))
+            return interfaceName;
+
+        string pattern = @"(?<!^)(?:";
+        List<string> patterns = [];
+
+        if (removeResource)
+            patterns.Add(@"resource");
+
+        if (removeVersion)
+            patterns.Add(@"v\d+");
+
+        pattern += string.Join("|", patterns) + @")";
+
+        if (patterns.Count == 0)
+            return interfaceName;
+
+        string result = Regex.Replace(interfaceName, pattern, "", RegexOptions.IgnoreCase);
+        return result;
     }
 }
