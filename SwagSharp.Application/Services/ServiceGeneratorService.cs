@@ -1,8 +1,8 @@
 ﻿using System.Text;
 using System.Text.Json;
-using SwagSharp.Domain.DTOs;
-using SwagSharp.Application.Contracts.Services;
+using SwagSharp.Application.DTOs;
 using System.Text.RegularExpressions;
+using SwagSharp.Application.Contracts.Services;
 
 namespace SwagSharp.Application.Services;
 

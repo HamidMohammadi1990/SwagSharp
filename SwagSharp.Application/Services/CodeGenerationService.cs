@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using SwagSharp.Application.Contracts.Services;
 
-namespace SwagSharp.Application.Services.CodeGen;
+namespace SwagSharp.Application.Services;
 
 public class CodeGenerationService(IModelGeneratorService modelGeneratorService, IServiceGeneratorService serviceGeneratorService) : ICodeGenerationService
 {

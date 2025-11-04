@@ -1,5 +1,4 @@
 using SwagSharp.Application.Services;
-using SwagSharp.Application.Services.CodeGen;
 using SwagSharp.Application.Contracts.Services;
 
 var builder = WebApplication.CreateBuilder(args);

@@ -1,6 +1,4 @@
-﻿using System.Reflection;
-
-namespace SwagSharp.Domain.DTOs;
+﻿namespace SwagSharp.Application.DTOs;
 
 public class EndpointInfo
 {
