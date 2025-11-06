@@ -1,6 +1,8 @@
-﻿namespace SwagSharp.Api.Contracts.Services;
+﻿using SwagSharp.Api.DTOs;
+
+namespace SwagSharp.Api.Contracts.Services;
 
 public interface ICodeGenerationService
 {
-    Task GenerateAsync(string swaggerJson);
+    Task GenerateAsync(GenerateServiceRequest request);
 }

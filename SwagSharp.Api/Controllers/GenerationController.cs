@@ -1,4 +1,4 @@
-﻿using SwagSharp.Api.Extensions;
+﻿using SwagSharp.Api.DTOs;
 using Microsoft.AspNetCore.Mvc;
 using SwagSharp.Api.Contracts.Services;
 
@@ -10,14 +10,12 @@ public class GenerationController(ICodeGenerationService codeGenerationService) 
 {
     [HttpPost("upload")]
     [RequestSizeLimit(50_000_000)]
-    public async Task<IActionResult> UploadSwaggerFile(IFormFile file)
+    public async Task<IActionResult> UploadSwaggerFile(GenerateServiceRequest request)
     {
-        if (file is null || (file?.Length ?? 0) == 0)
+        if (request.File is null || (request.File?.Length ?? 0) == 0)
             return BadRequest("فایل Swagger ارسال نشده است.");
 
-        string swaggerJson = await file!.ReadToEndAsync();
-
-        await codeGenerationService.GenerateAsync(swaggerJson);
-        return Ok(swaggerJson);
+        await codeGenerationService.GenerateAsync(request);
+        return Ok();
     }
 }

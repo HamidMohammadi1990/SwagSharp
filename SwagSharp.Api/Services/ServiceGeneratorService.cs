@@ -8,7 +8,7 @@ namespace SwagSharp.Api.Services;
 
 public class ServiceGeneratorService : IServiceGeneratorService
 {
-    public Task Generate(string outputPath, JsonDocument jsonDocument)
+    public Task GenerateAsync(string outputPath, JsonDocument jsonDocument)
     {
         if (!Directory.Exists(outputPath))
             Directory.CreateDirectory(outputPath);

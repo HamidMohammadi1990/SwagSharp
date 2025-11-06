@@ -7,7 +7,7 @@ namespace SwagSharp.Api.Services;
 
 public class ModelGeneratorService : IModelGeneratorService
 {
-    public Task Generate(string outputPath, JsonDocument jsonDocument)
+    public Task GenerateAsync(string modelsNameSpace, string outputPath, JsonDocument jsonDocument)
     {
         if (!Directory.Exists(outputPath))
             Directory.CreateDirectory(outputPath);
@@ -31,7 +31,7 @@ public class ModelGeneratorService : IModelGeneratorService
             {
                 try
                 {
-                    GenerateModelFile(model.Name, model.Definition, categoryPath);
+                    GenerateModelFile(model.Name, model.Definition, categoryPath, modelsNameSpace);
                 }
                 catch (Exception ex)
                 {
@@ -150,39 +150,39 @@ public class ModelGeneratorService : IModelGeneratorService
         return words;
     }
 
-    private void GenerateModelFile(string modelName, JsonElement definition, string categoryPath)
+    private async void GenerateModelFile(string modelName, JsonElement definition, string categoryPath, string modelsNameSpace)
     {
         if (IsEnumDefinition(definition))
         {
-            string enumCode = GenerateEnumClass(modelName, definition);
-            WriteFile(categoryPath, $"{modelName}.cs", enumCode);
+            string enumCode = GenerateEnumClass(modelName, definition, modelsNameSpace, "Enums");
+            await WriteFileAsync(categoryPath, $"{modelName}.cs", enumCode);
             Console.WriteLine($"  ✓ {modelName} (Enum)");
         }
         else if (HasProperties(definition))
         {
             var modelProperties = definition.GetProperty("properties");
-            string modelCode = GenerateModelClass(modelName, modelProperties, definition);
-            WriteFile(categoryPath, $"{modelName}.cs", modelCode);
+            string modelCode = GenerateModelClass(modelName, modelProperties, definition, modelsNameSpace, categoryPath);
+            await WriteFileAsync(categoryPath, $"{modelName}.cs", modelCode);
             Console.WriteLine($"  ✓ {modelName}");
         }
         else if (IsSimpleType(definition))
         {
-            string simpleTypeCode = GenerateSimpleTypeClass(modelName, definition);
-            WriteFile(categoryPath, $"{modelName}.cs", simpleTypeCode);
+            string simpleTypeCode = GenerateSimpleTypeClass(modelName, definition, modelsNameSpace, categoryPath);
+            await WriteFileAsync(categoryPath, $"{modelName}.cs", simpleTypeCode);
             Console.WriteLine($"  ✓ {modelName} (Simple)");
         }
         else
         {
-            string fallbackCode = GenerateFallbackModel(modelName);
-            WriteFile(categoryPath, $"{modelName}.cs", fallbackCode);
+            string fallbackCode = GenerateFallbackModel(modelName, modelsNameSpace, categoryPath);
+            await WriteFileAsync(categoryPath, $"{modelName}.cs", fallbackCode);
             Console.WriteLine($"  ✓ {modelName} (Fallback)");
         }
     }
 
-    private void WriteFile(string directory, string fileName, string content)
+    private async Task WriteFileAsync(string directory, string fileName, string content)
     {
         string filePath = Path.Combine(directory, fileName);
-        File.WriteAllText(filePath, content, Encoding.UTF8);
+        await File.WriteAllTextAsync(filePath, content, Encoding.UTF8);
     }
 
     private bool HasProperties(JsonElement definition)
@@ -202,7 +202,7 @@ public class ModelGeneratorService : IModelGeneratorService
                !definition.TryGetProperty("enum", out _);
     }
 
-    private string GenerateModelClass(string modelName, JsonElement properties, JsonElement definition)
+    private string GenerateModelClass(string modelName, JsonElement properties, JsonElement definition, string modelsNameSpace, string categoryPath)
     {
         var sb = new StringBuilder();
 
@@ -211,7 +211,7 @@ public class ModelGeneratorService : IModelGeneratorService
         sb.AppendLine();
 
         // Namespace
-        sb.AppendLine("namespace GeneratedCode.Models;");
+        sb.AppendLine($"namespace {modelsNameSpace}.{categoryPath};");
         sb.AppendLine();
 
         // Class definition with description
@@ -342,10 +342,10 @@ public class ModelGeneratorService : IModelGeneratorService
 
     private string GetSafePropertyName(string propertyName, string className, HashSet<string> usedNames)
     {
-        string pascalName = ToPascalCase(propertyName);        
+        string pascalName = ToPascalCase(propertyName);
         if (pascalName == className || pascalName == SanitizeModelName(className))
             pascalName += "Value";
-        
+
         if (usedNames.Contains(pascalName))
         {
             int counter = 1;
@@ -361,11 +361,11 @@ public class ModelGeneratorService : IModelGeneratorService
         return pascalName;
     }
 
-    private string GenerateEnumClass(string modelName, JsonElement definition)
+    private string GenerateEnumClass(string modelName, JsonElement definition, string modelsNameSpace, string categoryPath)
     {
         var sb = new StringBuilder();
 
-        sb.AppendLine("namespace GeneratedCode.Models;");
+        sb.AppendLine($"namespace {modelsNameSpace}.{categoryPath};");
         sb.AppendLine();
 
         string description = GetDescription(definition);
@@ -409,14 +409,14 @@ public class ModelGeneratorService : IModelGeneratorService
         return result;
     }
 
-    private string GenerateSimpleTypeClass(string modelName, JsonElement definition)
+    private string GenerateSimpleTypeClass(string modelName, JsonElement definition, string modelsNameSpace, string categoryPath)
     {
         var sb = new StringBuilder();
 
         sb.AppendLine("using System.Text.Json.Serialization;");
         sb.AppendLine();
 
-        sb.AppendLine("namespace GeneratedCode.Models;");
+        sb.AppendLine($"namespace {modelsNameSpace}.{categoryPath};");
         sb.AppendLine();
 
         string description = GetDescription(definition);
@@ -438,14 +438,14 @@ public class ModelGeneratorService : IModelGeneratorService
         return sb.ToString();
     }
 
-    private string GenerateFallbackModel(string modelName)
+    private string GenerateFallbackModel(string modelName, string modelsNameSpace, string categoryPath)
     {
         var sb = new StringBuilder();
 
         sb.AppendLine("using System.Text.Json.Serialization;");
         sb.AppendLine();
 
-        sb.AppendLine("namespace GeneratedCode.Models;");
+        sb.AppendLine($"namespace {modelsNameSpace}.{categoryPath};");
         sb.AppendLine("{");
         sb.AppendLine("/// <summary>");
         sb.AppendLine("/// Auto-generated fallback model");
@@ -461,9 +461,9 @@ public class ModelGeneratorService : IModelGeneratorService
 
     private string GetDescription(JsonElement element)
     {
-        if (element.TryGetProperty("description", out var descriptionElement))        
+        if (element.TryGetProperty("description", out var descriptionElement))
             return descriptionElement.GetString() ?? string.Empty;
-        
+
         return string.Empty;
     }
 
