@@ -35,7 +35,29 @@ public static class StringExtensions
         return char.ToUpper(cleaned[0]) + cleaned[1..];
     }
 
-    public static bool IsValueType(this string type)
+	public static string ToCamelCase(this string input)
+	{
+		if (string.IsNullOrEmpty(input))
+			return "param";
+
+		return char.ToLower(input[0]) + input[1..];
+	}
+
+	public static string ToValidClassName(this string input)
+	{
+		if (string.IsNullOrEmpty(input))
+			return "General";
+
+		// Remove invalid characters and convert to PascalCase
+		string cleaned = new(input.Where(char.IsLetterOrDigit).ToArray());
+
+		if (string.IsNullOrEmpty(cleaned))
+			return "General";
+
+		return char.ToUpper(cleaned[0]) + cleaned[1..];
+	}
+
+	public static bool IsValueType(this string type)
     {
         var valueTypes = new HashSet<string>
         {
@@ -132,4 +154,13 @@ public static class StringExtensions
 
         return entityName;
     }
+
+	public static string CleanOperationId(this string operationId)
+	{
+		if (string.IsNullOrEmpty(operationId))
+			return operationId;
+
+		int usingIndex = operationId.IndexOf("Using", StringComparison.OrdinalIgnoreCase);
+		return usingIndex >= 0 ? operationId[..usingIndex] : operationId;
+	}
 }

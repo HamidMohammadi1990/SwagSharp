@@ -12,8 +12,8 @@ public class GenerationController(ICodeGenerationService codeGenerationService) 
     [RequestSizeLimit(50_000_000)]
     public async Task<IActionResult> UploadSwaggerFile(GenerateServiceRequest request)
     {
-        if (request.File is null || (request.File?.Length ?? 0) == 0)
-            return BadRequest("فایل Swagger ارسال نشده است.");
+        if (!request.IsValid())
+            return BadRequest("مقادیر ارسالی معتبر نمی باشند");
 
         await codeGenerationService.GenerateAsync(request);
         return Ok();
