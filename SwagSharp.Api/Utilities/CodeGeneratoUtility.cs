@@ -28,11 +28,11 @@ public static class CodeGeneratoUtility
 		return pascalName;
 	}
 
-	public static string GenerateEnumClass(string modelName, JsonElement definition, string modelsNameSpace, string categoryPath)
+	public static string GenerateEnumClass(string modelName, JsonElement definition, string modelsNameSpace, string pluralModelName)
 	{
 		var sb = new StringBuilder();
 
-		sb.AppendLine($"namespace {modelsNameSpace}.{categoryPath};");
+		sb.AppendLine($"namespace {modelsNameSpace}.{pluralModelName}.Enums;");
 		sb.AppendLine();
 
 		string description = definition.GetDescription();
@@ -76,14 +76,14 @@ public static class CodeGeneratoUtility
 		return result;
 	}
 
-	public static string GenerateSimpleTypeClass(string modelName, JsonElement definition, string modelsNameSpace, string categoryPath)
+	public static string GenerateSimpleTypeClass(string modelName, JsonElement definition, string modelsNameSpace, string pluralModelName)
 	{
 		var sb = new StringBuilder();
 
 		sb.AppendLine("using System.Text.Json.Serialization;");
 		sb.AppendLine();
 
-		sb.AppendLine($"namespace {modelsNameSpace}.{categoryPath};");
+		sb.AppendLine($"namespace {modelsNameSpace}.{pluralModelName};");
 		sb.AppendLine();
 
 		string description = definition.GetDescription();
@@ -105,14 +105,14 @@ public static class CodeGeneratoUtility
 		return sb.ToString();
 	}
 
-	public static string GenerateFallbackModel(string modelName, string modelsNameSpace, string categoryPath)
+	public static string GenerateFallbackModel(string modelName, string modelsNameSpace, string pluralModelName)
 	{
 		var sb = new StringBuilder();
 
 		sb.AppendLine("using System.Text.Json.Serialization;");
 		sb.AppendLine();
 
-		sb.AppendLine($"namespace {modelsNameSpace}.{categoryPath};");
+		sb.AppendLine($"namespace {modelsNameSpace}.{pluralModelName};");
 		sb.AppendLine("{");
 		sb.AppendLine("/// <summary>");
 		sb.AppendLine("/// Auto-generated fallback model");
@@ -126,7 +126,7 @@ public static class CodeGeneratoUtility
 		return sb.ToString();
 	}
 
-	public static string GenerateModelClass(string modelName, JsonElement properties, JsonElement definition, string modelsNameSpace, string categoryPath)
+	public static string GenerateModelClass(string modelName, JsonElement properties, JsonElement definition, string modelsNameSpace, string pluralModelName)
 	{
 		var sb = new StringBuilder();
 
@@ -135,7 +135,7 @@ public static class CodeGeneratoUtility
 		sb.AppendLine();
 
 		// Namespace
-		sb.AppendLine($"namespace {modelsNameSpace}.{categoryPath};");
+		sb.AppendLine($"namespace {modelsNameSpace}.{pluralModelName};");
 		sb.AppendLine();
 
 		// Class definition with description

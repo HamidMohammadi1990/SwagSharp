@@ -18,7 +18,8 @@ public class ModelGeneratorService : IModelGeneratorService
         var categorizedModels = definitions.CategorizeByEntityName();
         foreach (var category in categorizedModels)
         {
-            string categoryPath = Path.Combine(outputPath, category.Key);
+            var pluralModelName = GeneralUtility.ToPlural(category.Key);
+            string categoryPath = Path.Combine(outputPath, pluralModelName);
             Directory.CreateDirectory(categoryPath);
 
             Console.WriteLine($"\n📁 Generating {category.Key} models ({category.Value.Count} models)...");
@@ -27,7 +28,7 @@ public class ModelGeneratorService : IModelGeneratorService
             {
                 try
                 {
-                    await GenerateModelFileAsync(model.Name, model.Definition, categoryPath, modelsNameSpace);
+                    await GenerateModelFileAsync(model.Name, model.Definition, categoryPath, modelsNameSpace, pluralModelName);
                 }
                 catch (Exception ex)
                 {
@@ -46,30 +47,30 @@ public class ModelGeneratorService : IModelGeneratorService
             Directory.CreateDirectory(outputPath);
     }
 
-    private static async Task GenerateModelFileAsync(string modelName, JsonElement definition, string categoryPath, string modelsNameSpace)
+    private static async Task GenerateModelFileAsync(string modelName, JsonElement definition, string categoryPath, string modelsNameSpace, string pluralModelName)
     {
         if (definition.IsEnumDefinition())
         {
-            string enumCode = CodeGeneratoUtility.GenerateEnumClass(modelName, definition, modelsNameSpace, "Enums");
+            string enumCode = CodeGeneratoUtility.GenerateEnumClass(modelName, definition, modelsNameSpace, pluralModelName);
             await FileUtility.WriteFileAsync(categoryPath, $"{modelName}.cs", enumCode);
             Console.WriteLine($"  ✓ {modelName} (Enum)");
         }
         else if (definition.HasProperties())
         {
             var modelProperties = definition.GetProperty("properties");
-            string modelCode = CodeGeneratoUtility.GenerateModelClass(modelName, modelProperties, definition, modelsNameSpace, categoryPath);
+            string modelCode = CodeGeneratoUtility.GenerateModelClass(modelName, modelProperties, definition, modelsNameSpace, pluralModelName);
             await FileUtility.WriteFileAsync(categoryPath, $"{modelName}.cs", modelCode);
             Console.WriteLine($"  ✓ {modelName}");
         }
         else if (definition.IsSimpleType())
         {
-            string simpleTypeCode = CodeGeneratoUtility.GenerateSimpleTypeClass(modelName, definition, modelsNameSpace, categoryPath);
+            string simpleTypeCode = CodeGeneratoUtility.GenerateSimpleTypeClass(modelName, definition, modelsNameSpace, pluralModelName);
             await FileUtility.WriteFileAsync(categoryPath, $"{modelName}.cs", simpleTypeCode);
             Console.WriteLine($"  ✓ {modelName} (Simple)");
         }
         else
         {
-            string fallbackCode = CodeGeneratoUtility.GenerateFallbackModel(modelName, modelsNameSpace, categoryPath);
+            string fallbackCode = CodeGeneratoUtility.GenerateFallbackModel(modelName, modelsNameSpace, pluralModelName);
             await FileUtility.WriteFileAsync(categoryPath, $"{modelName}.cs", fallbackCode);
             Console.WriteLine($"  ✓ {modelName} (Fallback)");
         }
