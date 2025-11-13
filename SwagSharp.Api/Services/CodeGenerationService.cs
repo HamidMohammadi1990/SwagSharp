@@ -20,6 +20,6 @@ public class CodeGenerationService(IModelGeneratorService modelGeneratorService,
         await modelGeneratorService.GenerateAsync(request.ModelsNameSpace, modelsDirectory, jsonDocument);
 
         var servicesDirectory = Path.Combine(currentDirectory, "Services");
-        await serviceGeneratorService.GenerateAsync(servicesDirectory, jsonDocument);
+        await serviceGeneratorService.GenerateAsync(servicesDirectory, jsonDocument, request.ModelsNameSpace, request.InterfacesNameSpace, request.ServicesNameSpace);
     }
 }
