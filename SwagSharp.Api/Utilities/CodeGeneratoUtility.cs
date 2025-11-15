@@ -51,13 +51,13 @@ public static class CodeGeneratoUtility
             int index = 0;
             foreach (var enumValue in enumValues.EnumerateArray())
             {
-                string enumName = enumValue.ValueKind == JsonValueKind.String
+                string? enumName = enumValue.ValueKind == JsonValueKind.String
                     ? enumValue.GetString()
                     : enumValue.GetRawText();
 
-                if (string.IsNullOrEmpty(enumName)) continue;
+                if (string.IsNullOrWhiteSpace(enumName)) continue;
 
-                string pascalEnumName = (enumName?.Replace("-", "_").Replace(" ", "_").Replace(".", "_")).ToPascalCase();
+                string pascalEnumName = (enumName.Replace("-", "_").Replace(" ", "_").Replace(".", "_")).ToPascalCase();
 
                 sb.AppendLine($"    {pascalEnumName} = {index},");
 
@@ -68,9 +68,7 @@ public static class CodeGeneratoUtility
         // Remove trailing comma from last entry
         string result = sb.ToString().TrimEnd();
         if (result.EndsWith(','))
-        {
             result = result[..^1];
-        }
 
         result += "}";
         return result;
@@ -165,7 +163,7 @@ public static class CodeGeneratoUtility
             string jsonPropertyName = propName;
             bool isRequired = propValue.IsPropertyRequired(propName, definition);
 
-            string safePropertyName = CodeGeneratoUtility.GetSafePropertyName(propName, modelName, usedPropertyNames);
+            string safePropertyName = GetSafePropertyName(propName, modelName, usedPropertyNames);
             usedPropertyNames.Add(safePropertyName);
 
             if (!string.IsNullOrEmpty(propDescription))
@@ -194,14 +192,14 @@ public static class CodeGeneratoUtility
 
     public static void GenerateServiceContract(string serviceName, List<EndpointInfo> endpoints, string outputPath, string modelsNameSpace, string interfacesNameSpace)
     {
-        var sb = new StringBuilder();        
+        var sb = new StringBuilder();
 
         sb.AppendLine("using System.Threading.Tasks;");
         sb.AppendLine("using System.Collections.Generic;");
         sb.AppendLine($"using {modelsNameSpace}.{GeneralUtility.ToPlural(serviceName)};");
         sb.AppendLine();
 
-        
+
         string interfaceName = $"I{serviceName}Service";
         string interfacePath = Path.Combine(outputPath, "Contracts");
         Directory.CreateDirectory(interfacePath);
@@ -266,14 +264,12 @@ public static class CodeGeneratoUtility
         }
     }
 
-    public static void GenerateService(string serviceName, List<EndpointInfo> endpoints, string outputPath, string servicesNameSpace)
+    public static void GenerateService(string serviceName, List<EndpointInfo> endpoints, string outputPath, string servicesNameSpace, string interfacesNameSpace)
     {
         var sb = new StringBuilder();
 
-        sb.AppendLine("using System.Collections.Generic;");
-        sb.AppendLine("using System.Threading.Tasks;");
-        sb.AppendLine("using GeneratedCode.Models;");
-        sb.AppendLine("using GeneratedCode.Services.Interfaces;");
+        sb.AppendLine($"using {interfacesNameSpace};");
+        sb.AppendLine("using SwagSharp.Api.Contracts.Services;");
         sb.AppendLine();
 
         string className = $"{serviceName}Service";
@@ -286,7 +282,7 @@ public static class CodeGeneratoUtility
         sb.AppendLine("/// <summary>");
         sb.AppendLine($"/// Service implementation for {serviceName} operations");
         sb.AppendLine("/// </summary>");
-        sb.AppendLine($"public class {className} : {interfaceName}");
+        sb.AppendLine($"public class {className}(ICBaasClientService cBaasClientService) : {interfaceName}");
         sb.AppendLine("{");
 
         foreach (var endpoint in endpoints)
@@ -336,13 +332,14 @@ public static class CodeGeneratoUtility
             sb.AppendLine($"    public async {returnType} {cleanOperationId}Async({parameterWithTypeString})");
             sb.AppendLine("    {");
 
+            var methodName = GetClientMethodName(endpoint.HttpMethod);
             if (endpoint.ReturnType != "void")
             {
-                sb.AppendLine($"        return await _apiClient.{cleanOperationId}Async({parameterString});");
+                sb.AppendLine($"        return await cBaasClientService.{methodName}({parameterString});");
             }
             else
             {
-                sb.AppendLine($"        await _apiClient.{cleanOperationId}Async({parameterString});");
+                sb.AppendLine($"        await cBaasClientService.{methodName}({parameterString});");
             }
 
             sb.Append("    }");
@@ -354,5 +351,17 @@ public static class CodeGeneratoUtility
             Console.WriteLine($"✗ Error generating implementation for {endpoint.OperationId}: {ex.Message}");
             return null;
         }
+    }
+
+    private static string GetClientMethodName(string endpointMethodName)
+    {
+        return endpointMethodName.ToLower() switch
+        {
+            "post" => "PostAsync",
+            "get" => "GetAsync",
+            "put" => "PutAsync",
+            "delete" => "DeleteAsync",
+            _ => ""
+        };
     }
 }

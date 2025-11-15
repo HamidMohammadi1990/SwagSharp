@@ -21,7 +21,7 @@ public class ServiceGeneratorService : IServiceGeneratorService
         {            
             string serviceName = GeneralUtility.CleanInterfaceNameAdvanced(service.Key.ToPascalCase().ToValidClassName());
             CodeGeneratoUtility.GenerateServiceContract(serviceName, service.Value, outputPath, modelsNameSpace, interfacesNameSpace);
-            CodeGeneratoUtility.GenerateService(serviceName, service.Value, outputPath, servicesNameSpace);
+            CodeGeneratoUtility.GenerateService(serviceName, service.Value, outputPath, servicesNameSpace, interfacesNameSpace);
         }
 
         return Task.CompletedTask;
