@@ -150,4 +150,12 @@ public static class GeneralUtility
 
         return newWord;
     }
+
+    public static string ExtractType(string input)
+    {
+        if (input.StartsWith("List<") && input.EndsWith(">"))
+            return input[5..^1];
+
+        return input;
+    }
 }

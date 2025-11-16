@@ -201,12 +201,19 @@ public static class CodeGeneratoUtility
         string interfacePath = Path.Combine(outputPath, "Contracts");
         Directory.CreateDirectory(interfacePath);
 
-        var usings = modelNameSpaces
-            .Where(x => endpoints.Any(e => x.Name == e.ReturnType))
-            .Select(x => $"{x.NameSpace}")
+        var postOrPutModels = endpoints
+            .Where(x =>
+                x.HttpMethod.Equals("post", StringComparison.CurrentCultureIgnoreCase) ||
+                x.HttpMethod.Equals("put", StringComparison.CurrentCultureIgnoreCase))
+            .SelectMany(x => x.Parameters.Where(p => p.In.Equals("body", StringComparison.CurrentCultureIgnoreCase)))
+            .DistinctBy(x => x.Type)
             .ToList();
 
-        usings.Add($"using {modelsNameSpace}.{GeneralUtility.ToPlural(serviceName)};");
+        var usings = modelNameSpaces
+            .Where(x => endpoints.Any(e => x.Name.Equals(GeneralUtility.ExtractType(e.ReturnType), StringComparison.CurrentCultureIgnoreCase)) ||
+                        postOrPutModels.Any(p => p.Type.Equals(x.Name, StringComparison.CurrentCultureIgnoreCase)))
+            .Select(x => $"{x.NameSpace}")
+            .ToList();
 
         usings = [.. usings.Distinct().OrderBy(x => x.Length)];
 
@@ -285,7 +292,7 @@ public static class CodeGeneratoUtility
         Directory.CreateDirectory(implementationPath);
 
         var usings = modelNameSpaces
-            .Where(x => endpoints.Any(e => x.Name == e.ReturnType))
+            .Where(x => endpoints.Any(e => x.Name.Equals(e.ReturnType, StringComparison.CurrentCultureIgnoreCase)))
             .Select(x => $"{x.NameSpace}")
             .ToList();
 
