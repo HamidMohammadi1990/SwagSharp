@@ -15,6 +15,7 @@ public class ModelGeneratorService : IModelGeneratorService
 
         Console.WriteLine($"Found {definitions.EnumerateObject().Count()} definitions");
 
+
         var categorizedModels = definitions.CategorizeByEntityName();
         foreach (var category in categorizedModels)
         {
