@@ -2,7 +2,7 @@
 
 namespace SwagSharp.Api.DTOs;
 
-public class ModelInfo
+public record ModelInfo
 {
     public string Name { get; set; }
     public JsonElement Definition { get; set; }

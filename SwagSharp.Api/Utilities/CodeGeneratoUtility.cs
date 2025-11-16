@@ -1,9 +1,10 @@
-﻿using System;
+﻿using SwagSharp.Api.DTOs;
+using SwagSharp.Api.Extensions;
+using SwagSharp.Api.Models;
+using System;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using SwagSharp.Api.DTOs;
-using SwagSharp.Api.Extensions;
 
 namespace SwagSharp.Api.Utilities;
 
@@ -192,15 +193,27 @@ public static class CodeGeneratoUtility
         return sb.ToString();
     }
 
-    public static void GenerateServiceContract(string serviceName, List<EndpointInfo> endpoints, string outputPath, string modelsNameSpace, string interfacesNameSpace)
+    public static void GenerateServiceContract(string serviceName, List<EndpointInfo> endpoints, string outputPath, string modelsNameSpace, string interfacesNameSpace, List<ModelNameSpaceInfo> modelNameSpaces)
     {
         var sb = new StringBuilder();
-        sb.AppendLine($"using {modelsNameSpace}.{GeneralUtility.ToPlural(serviceName)};");
-        sb.AppendLine();
 
         string interfaceName = $"I{serviceName}Service";
         string interfacePath = Path.Combine(outputPath, "Contracts");
         Directory.CreateDirectory(interfacePath);
+
+        var usings = modelNameSpaces
+            .Where(x => endpoints.Any(e => x.Name == e.ReturnType))
+            .Select(x => $"{x.NameSpace}")
+            .ToList();
+
+        usings.Add($"using {modelsNameSpace}.{GeneralUtility.ToPlural(serviceName)};");
+
+        usings = [.. usings.Distinct().OrderBy(x => x.Length)];
+
+        foreach (var item in usings)
+            sb.AppendLine(item);
+
+        sb.AppendLine();
 
         sb.AppendLine($"namespace {interfacesNameSpace};");
         sb.AppendLine();
@@ -262,19 +275,30 @@ public static class CodeGeneratoUtility
         }
     }
 
-    public static void GenerateService(string serviceName, List<EndpointInfo> endpoints, string outputPath, string servicesNameSpace, string interfacesNameSpace)
+    public static void GenerateService(string serviceName, List<EndpointInfo> endpoints, string outputPath, string servicesNameSpace, string interfacesNameSpace, List<ModelNameSpaceInfo> modelNameSpaces)
     {
         var sb = new StringBuilder();
-
-        sb.AppendLine($"using {interfacesNameSpace};");
-        sb.AppendLine($"using SwagSharp.Api.Models;");
-        sb.AppendLine("using SwagSharp.Api.Contracts.Services;");
-        sb.AppendLine();
 
         string className = $"{serviceName}Service";
         string interfaceName = $"I{className}";
         string implementationPath = Path.Combine(outputPath, "Services");
         Directory.CreateDirectory(implementationPath);
+
+        var usings = modelNameSpaces
+            .Where(x => endpoints.Any(e => x.Name == e.ReturnType))
+            .Select(x => $"{x.NameSpace}")
+            .ToList();
+
+        usings.Add("using SwagSharp.Api.Models;");
+        usings.Add($"using {interfacesNameSpace};");
+        usings.Add("using SwagSharp.Api.Contracts.Services;");
+
+        usings = [.. usings.Distinct().OrderBy(x => x.Length)];
+
+        foreach (var item in usings)
+            sb.AppendLine(item);
+
+        sb.AppendLine();
 
         sb.AppendLine($"namespace {servicesNameSpace};");
         sb.AppendLine();

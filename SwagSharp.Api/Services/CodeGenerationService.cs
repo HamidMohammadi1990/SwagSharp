@@ -17,9 +17,13 @@ public class CodeGenerationService(IModelGeneratorService modelGeneratorService,
         var currentDirectory = Directory.GetCurrentDirectory();
 
         var modelsDirectory = Path.Combine(currentDirectory, "Models");
-        await modelGeneratorService.GenerateAsync(request.ModelsNameSpace, modelsDirectory, jsonDocument);
+        var modelNameSpaces = await modelGeneratorService
+            .GenerateAsync(request.ModelsNameSpace, modelsDirectory, jsonDocument);
 
         var servicesDirectory = Path.Combine(currentDirectory, "Services");
-        await serviceGeneratorService.GenerateAsync(servicesDirectory, jsonDocument, request.ModelsNameSpace, request.InterfacesNameSpace, request.ServicesNameSpace);
+        await serviceGeneratorService
+            .GenerateAsync(servicesDirectory, jsonDocument,
+            request.ModelsNameSpace, request.InterfacesNameSpace,
+            request.ServicesNameSpace, modelNameSpaces);
     }
 }

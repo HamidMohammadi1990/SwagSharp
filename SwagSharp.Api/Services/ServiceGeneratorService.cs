@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using SwagSharp.Api.Models;
 using SwagSharp.Api.Utilities;
 using SwagSharp.Api.Extensions;
 using SwagSharp.Api.Contracts.Services;
@@ -7,7 +8,7 @@ namespace SwagSharp.Api.Services;
 
 public class ServiceGeneratorService : IServiceGeneratorService
 {
-    public Task GenerateAsync(string outputPath, JsonDocument jsonDocument, string modelsNameSpace, string interfacesNameSpace, string servicesNameSpace)
+    public Task GenerateAsync(string outputPath, JsonDocument jsonDocument, string modelsNameSpace, string interfacesNameSpace, string servicesNameSpace, List<ModelNameSpaceInfo> modelNameSpaces)
     {
         if (!Directory.Exists(outputPath))
             Directory.CreateDirectory(outputPath);
@@ -18,10 +19,10 @@ public class ServiceGeneratorService : IServiceGeneratorService
         Console.WriteLine($"Found {services.Count} service groups");
 
         foreach (var service in services)
-        {            
+        {
             string serviceName = GeneralUtility.CleanInterfaceNameAdvanced(service.Key.ToPascalCase().ToValidClassName());
-            CodeGeneratoUtility.GenerateServiceContract(serviceName, service.Value, outputPath, modelsNameSpace, interfacesNameSpace);
-            CodeGeneratoUtility.GenerateService(serviceName, service.Value, outputPath, servicesNameSpace, interfacesNameSpace);
+            CodeGeneratoUtility.GenerateServiceContract(serviceName, service.Value, outputPath, modelsNameSpace, interfacesNameSpace, modelNameSpaces);
+            CodeGeneratoUtility.GenerateService(serviceName, service.Value, outputPath, servicesNameSpace, interfacesNameSpace, modelNameSpaces);
         }
 
         return Task.CompletedTask;

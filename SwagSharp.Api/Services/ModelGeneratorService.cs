@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using SwagSharp.Api.Models;
 using SwagSharp.Api.Utilities;
 using SwagSharp.Api.Extensions;
 using SwagSharp.Api.Contracts.Services;
@@ -7,14 +8,14 @@ namespace SwagSharp.Api.Services;
 
 public class ModelGeneratorService : IModelGeneratorService
 {
-    public async Task GenerateAsync(string modelsNameSpace, string outputPath, JsonDocument jsonDocument)
+    public async Task<List<ModelNameSpaceInfo>> GenerateAsync(string modelsNameSpace, string outputPath, JsonDocument jsonDocument)
     {
         EnsureDirectoryExists(outputPath);
 
         var definitions = jsonDocument.RootElement.GetProperty("definitions");
 
         Console.WriteLine($"Found {definitions.EnumerateObject().Count()} definitions");
-
+        var modelNameSpaces = new List<ModelNameSpaceInfo>();
 
         var categorizedModels = definitions.CategorizeByEntityName();
         foreach (var category in categorizedModels)
@@ -29,7 +30,9 @@ public class ModelGeneratorService : IModelGeneratorService
             {
                 try
                 {
-                    await GenerateModelFileAsync(model.Name, model.Definition, categoryPath, modelsNameSpace, pluralModelName);
+                    var nameSpace = await GenerateModelFileAsync(model.Name, model.Definition, categoryPath, modelsNameSpace, pluralModelName);
+
+                    modelNameSpaces.Add(new ModelNameSpaceInfo(model.Name, nameSpace));
                 }
                 catch (Exception ex)
                 {
@@ -37,6 +40,8 @@ public class ModelGeneratorService : IModelGeneratorService
                 }
             }
         }
+
+        return modelNameSpaces;
     }
 
     private static void EnsureDirectoryExists(string outputPath)
@@ -48,13 +53,15 @@ public class ModelGeneratorService : IModelGeneratorService
             Directory.CreateDirectory(outputPath);
     }
 
-    private static async Task GenerateModelFileAsync(string modelName, JsonElement definition, string categoryPath, string modelsNameSpace, string pluralModelName)
+    private static async Task<string> GenerateModelFileAsync(string modelName, JsonElement definition, string categoryPath, string modelsNameSpace, string pluralModelName)
     {
         if (definition.IsEnumDefinition())
         {
             string enumCode = CodeGeneratoUtility.GenerateEnumClass(modelName, definition, modelsNameSpace, pluralModelName);
             await FileUtility.WriteFileAsync(categoryPath, $"{modelName}.cs", enumCode);
             Console.WriteLine($"  ✓ {modelName} (Enum)");
+
+            return $"using {modelsNameSpace}.{pluralModelName}.Enums;";
         }
         else if (definition.HasProperties())
         {
@@ -62,18 +69,24 @@ public class ModelGeneratorService : IModelGeneratorService
             string modelCode = CodeGeneratoUtility.GenerateModelClass(modelName, modelProperties, definition, modelsNameSpace, pluralModelName);
             await FileUtility.WriteFileAsync(categoryPath, $"{modelName}.cs", modelCode);
             Console.WriteLine($"  ✓ {modelName}");
+
+            return $"using {modelsNameSpace}.{pluralModelName};";
         }
         else if (definition.IsSimpleType())
         {
             string simpleTypeCode = CodeGeneratoUtility.GenerateSimpleTypeClass(modelName, definition, modelsNameSpace, pluralModelName);
             await FileUtility.WriteFileAsync(categoryPath, $"{modelName}.cs", simpleTypeCode);
             Console.WriteLine($"  ✓ {modelName} (Simple)");
+
+            return $"using {modelsNameSpace}.{pluralModelName};";
         }
         else
         {
             string fallbackCode = CodeGeneratoUtility.GenerateFallbackModel(modelName, modelsNameSpace, pluralModelName);
             await FileUtility.WriteFileAsync(categoryPath, $"{modelName}.cs", fallbackCode);
             Console.WriteLine($"  ✓ {modelName} (Fallback)");
+
+            return $"using {modelsNameSpace}.{pluralModelName};";
         }
     }
 }
