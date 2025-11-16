@@ -1,5 +1,7 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using SwagSharp.Api.DTOs;
 using SwagSharp.Api.Extensions;
 
@@ -193,12 +195,8 @@ public static class CodeGeneratoUtility
     public static void GenerateServiceContract(string serviceName, List<EndpointInfo> endpoints, string outputPath, string modelsNameSpace, string interfacesNameSpace)
     {
         var sb = new StringBuilder();
-
-        sb.AppendLine("using System.Threading.Tasks;");
-        sb.AppendLine("using System.Collections.Generic;");
         sb.AppendLine($"using {modelsNameSpace}.{GeneralUtility.ToPlural(serviceName)};");
         sb.AppendLine();
-
 
         string interfaceName = $"I{serviceName}Service";
         string interfacePath = Path.Combine(outputPath, "Contracts");
@@ -269,6 +267,7 @@ public static class CodeGeneratoUtility
         var sb = new StringBuilder();
 
         sb.AppendLine($"using {interfacesNameSpace};");
+        sb.AppendLine($"using SwagSharp.Api.Models;");
         sb.AppendLine("using SwagSharp.Api.Contracts.Services;");
         sb.AppendLine();
 
@@ -279,9 +278,6 @@ public static class CodeGeneratoUtility
 
         sb.AppendLine($"namespace {servicesNameSpace};");
         sb.AppendLine();
-        sb.AppendLine("/// <summary>");
-        sb.AppendLine($"/// Service implementation for {serviceName} operations");
-        sb.AppendLine("/// </summary>");
         sb.AppendLine($"public class {className}(ICBaasClientService cBaasClientService) : {interfaceName}");
         sb.AppendLine("{");
 
@@ -312,19 +308,20 @@ public static class CodeGeneratoUtility
             var parameters = endpoint.Parameters.Select(p =>
             {
                 string paramType = GeneralUtility.GetParameterTypeForSignature(p);
-                return $"{paramType} {p.Name.ToCamelCase()}";
+                var method = endpoint.HttpMethod.ToLower();
+                return (method != "post" && method != "put") ? $"{paramType} {p.Name.ToCamelCase()}" : $"{paramType} request";
             }).ToList();
 
             string parameterString = string.Join(", ", endpoint.Parameters.Select(p => p.Name.ToCamelCase()).ToList());
             string parameterWithTypeString = string.Join(", ", parameters);
-            string returnType = endpoint.ReturnType == "void" ? "Task" : $"Task<{endpoint.ReturnType}>";
+            string returnType = endpoint.ReturnType == "void" ? "Task<Response<bool>>" : $"Task<Response<{endpoint.ReturnType}>>";
 
             var sb = new StringBuilder();
             var cleanOperationId = endpoint.OperationId.CleanOperationId().ToPascalCase();
 
             if (!string.IsNullOrEmpty(endpoint.Summary))
             {
-                sb.AppendLine("/// <summary>");
+                sb.AppendLine("    /// <summary>");
                 sb.AppendLine($"    /// {endpoint.Summary}");
                 sb.AppendLine("    /// </summary>");
             }
@@ -332,15 +329,8 @@ public static class CodeGeneratoUtility
             sb.AppendLine($"    public async {returnType} {cleanOperationId}Async({parameterWithTypeString})");
             sb.AppendLine("    {");
 
-            var methodName = GetClientMethodName(endpoint.HttpMethod);
-            if (endpoint.ReturnType != "void")
-            {
-                sb.AppendLine($"        return await cBaasClientService.{methodName}({parameterString});");
-            }
-            else
-            {
-                sb.AppendLine($"        await cBaasClientService.{methodName}({parameterString});");
-            }
+            string clientCall = GenerateClientCall(endpoint);
+            sb.AppendLine($"        return {clientCall};");
 
             sb.Append("    }");
 
@@ -353,6 +343,93 @@ public static class CodeGeneratoUtility
         }
     }
 
+    private static string GenerateClientCall(EndpointInfo endpoint)
+    {
+        string methodName = GetClientMethodName(endpoint.HttpMethod);
+        string url = BuildUrl(endpoint);
+
+        // تشخیص نوع Generic parameters
+        string genericParameters = GetGenericParameters(endpoint);
+
+        // ساخت پارامترهای متد
+        string methodParameters = BuildMethodParameters(endpoint, url);
+
+        return $"await cBaasClientService.{methodName}{genericParameters}({methodParameters})";
+    }
+
+    private static string BuildUrl(EndpointInfo endpoint)
+    {
+        string url = CleanUrl(endpoint.Url);
+
+        // جایگزینی پارامترهای path
+        var pathParams = endpoint.Parameters.Where(p => p.In == "path");
+        foreach (var param in pathParams)
+        {
+            url = url.Replace($"{{{param.Name}}}", $"{{{param.Name.ToCamelCase()}}}");
+        }
+
+        // اضافه کردن query parameters برای GET
+        if (endpoint.HttpMethod.ToLower() == "get")
+        {
+            var queryParams = endpoint.Parameters.Where(p => p.In == "query");
+            if (queryParams.Any())
+            {
+                url += "?" + string.Join("&", queryParams.Select(p => $"{p.Name}={{{p.Name.ToCamelCase()}}}"));
+            }
+        }
+
+        return $"$\"{url}\"";
+    }
+
+    private static string CleanUrl(string url)
+    {
+        return Regex.Replace(url, @"^\/api\/v\d+\/", "");
+    }
+
+    private static string GetGenericParameters(EndpointInfo endpoint)
+    {
+        if (endpoint.HttpMethod.ToLower() == "get")
+        {
+            if (endpoint.ReturnType != "void" && endpoint.ReturnType != "Task")
+            {
+                return $"<{endpoint.ReturnType}>";
+            }
+        }
+        else if (endpoint.HttpMethod.ToLower() == "post" || endpoint.HttpMethod.ToLower() == "put")
+        {
+            var bodyParam = endpoint.Parameters.FirstOrDefault(p => p.In == "body");
+            if (bodyParam != null && endpoint.ReturnType != "void" && endpoint.ReturnType != "Task")
+            {
+                return $"<{bodyParam.Type}, {endpoint.ReturnType}>";
+            }
+            else if (bodyParam != null)
+            {
+                return $"<{bodyParam.Type}, bool>";
+            }
+            else if (endpoint.ReturnType != "void" && endpoint.ReturnType != "Task")
+            {
+                return $"<{endpoint.ReturnType}>";
+            }
+        }
+
+        return "";
+    }
+
+    private static string BuildMethodParameters(EndpointInfo endpoint, string url)
+    {
+        var parameters = new List<string> { url };
+
+        // برای POST و PUT، پارامتر body را اضافه کن
+        if (endpoint.HttpMethod.ToLower() == "post" || endpoint.HttpMethod.ToLower() == "put")
+        {
+            var bodyParam = endpoint.Parameters.FirstOrDefault(p => p.In == "body");
+            if (bodyParam != null)
+                parameters.Add("request");
+        }
+
+        return string.Join(", ", parameters);
+    }
+
     private static string GetClientMethodName(string endpointMethodName)
     {
         return endpointMethodName.ToLower() switch
@@ -361,7 +438,7 @@ public static class CodeGeneratoUtility
             "get" => "GetAsync",
             "put" => "PutAsync",
             "delete" => "DeleteAsync",
-            _ => ""
+            _ => endpointMethodName.ToLower() + "Async"
         };
     }
 }
