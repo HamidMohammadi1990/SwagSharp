@@ -127,12 +127,17 @@ public static class CodeGeneratoUtility
         return sb.ToString();
     }
 
-    public static string GenerateModelClass(string modelName, JsonElement properties, JsonElement definition, string modelsNameSpace, string pluralModelName)
+    public static string GenerateModelClass(string modelName, JsonElement properties, JsonElement definition, string modelsNameSpace, string pluralModelName, List<ModelNameSpaceInfo> modelNameSpaces)
     {
         var sb = new StringBuilder();
 
+        var usings = properties.GetUsings(modelNameSpaces);
+        usings.Add("using System.Text.Json.Serialization;");
+
+        foreach (var item in usings)
+            sb.AppendLine(item);
+
         // Using statements
-        sb.AppendLine("using System.Text.Json.Serialization;");
         sb.AppendLine();
 
         // Namespace
@@ -203,6 +208,8 @@ public static class CodeGeneratoUtility
 
         var usings = GeneralUtility.GetUsings(endpoints, modelNameSpaces);
 
+        usings.Add("using SwagSharp.Api.Models;");
+
         foreach (var item in usings)
             sb.AppendLine(item);
 
@@ -254,10 +261,10 @@ public static class CodeGeneratoUtility
             {
                 string paramType = GeneralUtility.GetParameterTypeForSignature(param);
                 var httpMethod = endpoint.HttpMethod.ToLower();
-                parameters.Add($"{paramType} {((httpMethod == "post" || httpMethod == "put") ? "request" : param.Name.ToCamelCase())}");
+                parameters.Add($"{paramType} {(((httpMethod == "post" || httpMethod == "put") && processedParameters.Count == 1) ? "request" : param.Name.ToCamelCase())}");
             }
 
-            string returnType = endpoint.ReturnType == "void" ? "Task" : $"Task<{endpoint.ReturnType}>";
+            string returnType = endpoint.ReturnType == "void" ? "Task<Response<bool>>" : $"Task<Response<{endpoint.ReturnType}>>";
             string parameterString = string.Join(", ", parameters);
 
             var cleanOperationId = endpoint.OperationId.CleanOperationId().ToPascalCase();
@@ -361,7 +368,7 @@ public static class CodeGeneratoUtility
             {
                 string paramType = GeneralUtility.GetParameterTypeForSignature(p);
                 var method = endpoint.HttpMethod.ToLower();
-                return (method != "post" && method != "put") ? $"{paramType} {p.Name.ToCamelCase()}" : $"{paramType} request";
+                return ((method == "post" || method == "put") && endpoint.Parameters.Count == 1) ? $"{paramType} request" : $"{paramType} {p.Name.ToCamelCase()}";
             }).ToList();
 
             string parameterString = string.Join(", ", endpoint.Parameters.Select(p => p.Name.ToCamelCase()).ToList());

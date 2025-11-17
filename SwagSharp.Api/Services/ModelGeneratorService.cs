@@ -21,6 +21,31 @@ public class ModelGeneratorService : IModelGeneratorService
         foreach (var category in categorizedModels)
         {
             var pluralModelName = GeneralUtility.ToPlural(category.Key);
+
+            foreach (var model in category.Value)
+            {
+                if (model.Definition.IsEnumDefinition())
+                {
+                    modelNameSpaces.Add(new ModelNameSpaceInfo(model.Name, $"using {modelsNameSpace}.{pluralModelName}.Enums;"));
+                }
+                else if (model.Definition.HasProperties())
+                {
+                    modelNameSpaces.Add(new ModelNameSpaceInfo(model.Name, $"using {modelsNameSpace}.{pluralModelName};"));
+                }
+                else if (model.Definition.IsSimpleType())
+                {
+                    modelNameSpaces.Add(new ModelNameSpaceInfo(model.Name, $"using {modelsNameSpace}.{pluralModelName};"));
+                }
+                else
+                {
+                    modelNameSpaces.Add(new ModelNameSpaceInfo(model.Name, $"using {modelsNameSpace}.{pluralModelName};"));
+                }
+            }
+        }
+
+        foreach (var category in categorizedModels)
+        {
+            var pluralModelName = GeneralUtility.ToPlural(category.Key);
             string categoryPath = Path.Combine(outputPath, pluralModelName);
             Directory.CreateDirectory(categoryPath);
 
@@ -30,9 +55,7 @@ public class ModelGeneratorService : IModelGeneratorService
             {
                 try
                 {
-                    var nameSpace = await GenerateModelFileAsync(model.Name, model.Definition, categoryPath, modelsNameSpace, pluralModelName);
-
-                    modelNameSpaces.Add(new ModelNameSpaceInfo(model.Name, nameSpace));
+                    var nameSpace = await GenerateModelFileAsync(model.Name, model.Definition, categoryPath, modelsNameSpace, pluralModelName, modelNameSpaces);
                 }
                 catch (Exception ex)
                 {
@@ -53,7 +76,7 @@ public class ModelGeneratorService : IModelGeneratorService
             Directory.CreateDirectory(outputPath);
     }
 
-    private static async Task<string> GenerateModelFileAsync(string modelName, JsonElement definition, string categoryPath, string modelsNameSpace, string pluralModelName)
+    private static async Task<string> GenerateModelFileAsync(string modelName, JsonElement definition, string categoryPath, string modelsNameSpace, string pluralModelName, List<ModelNameSpaceInfo> modelNameSpaces)
     {
         if (definition.IsEnumDefinition())
         {
@@ -66,7 +89,7 @@ public class ModelGeneratorService : IModelGeneratorService
         else if (definition.HasProperties())
         {
             var modelProperties = definition.GetProperty("properties");
-            string modelCode = CodeGeneratoUtility.GenerateModelClass(modelName, modelProperties, definition, modelsNameSpace, pluralModelName);
+            string modelCode = CodeGeneratoUtility.GenerateModelClass(modelName, modelProperties, definition, modelsNameSpace, pluralModelName, modelNameSpaces);
             await FileUtility.WriteFileAsync(categoryPath, $"{modelName}.cs", modelCode);
             Console.WriteLine($"  ✓ {modelName}");
 
