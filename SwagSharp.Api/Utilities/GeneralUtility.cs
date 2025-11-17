@@ -1,4 +1,5 @@
 ﻿using SwagSharp.Api.DTOs;
+using SwagSharp.Api.Models;
 using System.Text.RegularExpressions;
 
 namespace SwagSharp.Api.Utilities;
@@ -153,9 +154,27 @@ public static class GeneralUtility
 
     public static string ExtractType(string input)
     {
-        if (input.StartsWith("List<") && input.EndsWith(">"))
-            return input[5..^1];
+        return input.StartsWith("List<") && input.EndsWith('>') ? input[5..^1] : input;
+    }
 
-        return input;
+    public static List<string> GetUsings(List<EndpointInfo> endpoints, List<ModelNameSpaceInfo> modelNameSpaces)
+    {
+        var postOrPutModels = endpoints
+            .Where(x =>
+                x.HttpMethod.Equals("post", StringComparison.CurrentCultureIgnoreCase) ||
+                x.HttpMethod.Equals("put", StringComparison.CurrentCultureIgnoreCase))
+            .SelectMany(x => x.Parameters.Where(p => p.In.Equals("body", StringComparison.CurrentCultureIgnoreCase)))
+            .DistinctBy(x => x.Type)
+            .ToList();
+
+        var usings = modelNameSpaces
+            .Where(x => endpoints.Any(e => x.Name.Equals(ExtractType(e.ReturnType), StringComparison.CurrentCultureIgnoreCase)) ||
+                        postOrPutModels.Any(p => p.Type.Equals(x.Name, StringComparison.CurrentCultureIgnoreCase)))
+            .Select(x => $"{x.NameSpace}")
+            .Distinct()
+            .OrderBy(x => x.Length)
+            .ToList();
+
+        return usings;
     }
 }

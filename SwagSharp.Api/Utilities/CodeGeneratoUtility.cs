@@ -31,7 +31,7 @@ public static class CodeGeneratoUtility
         return pascalName;
     }
 
-    public static string GenerateEnumClass(string modelName, JsonElement definition, string modelsNameSpace, string pluralModelName)
+    public static string GenerateEnum(string modelName, JsonElement definition, string modelsNameSpace, string pluralModelName)
     {
         var sb = new StringBuilder();
 
@@ -201,21 +201,7 @@ public static class CodeGeneratoUtility
         string interfacePath = Path.Combine(outputPath, "Contracts");
         Directory.CreateDirectory(interfacePath);
 
-        var postOrPutModels = endpoints
-            .Where(x =>
-                x.HttpMethod.Equals("post", StringComparison.CurrentCultureIgnoreCase) ||
-                x.HttpMethod.Equals("put", StringComparison.CurrentCultureIgnoreCase))
-            .SelectMany(x => x.Parameters.Where(p => p.In.Equals("body", StringComparison.CurrentCultureIgnoreCase)))
-            .DistinctBy(x => x.Type)
-            .ToList();
-
-        var usings = modelNameSpaces
-            .Where(x => endpoints.Any(e => x.Name.Equals(GeneralUtility.ExtractType(e.ReturnType), StringComparison.CurrentCultureIgnoreCase)) ||
-                        postOrPutModels.Any(p => p.Type.Equals(x.Name, StringComparison.CurrentCultureIgnoreCase)))
-            .Select(x => $"{x.NameSpace}")
-            .ToList();
-
-        usings = [.. usings.Distinct().OrderBy(x => x.Length)];
+        var usings = GeneralUtility.GetUsings(endpoints, modelNameSpaces);
 
         foreach (var item in usings)
             sb.AppendLine(item);
@@ -262,11 +248,13 @@ public static class CodeGeneratoUtility
         try
         {
             var parameters = new List<string>();
+            var processedParameters = ProcessArrayParameters(endpoint.Parameters);
 
-            foreach (var param in endpoint.Parameters)
+            foreach (var param in processedParameters)
             {
                 string paramType = GeneralUtility.GetParameterTypeForSignature(param);
-                parameters.Add($"{paramType} {(param.Name).ToCamelCase()}");
+                var httpMethod = endpoint.HttpMethod.ToLower();
+                parameters.Add($"{paramType} {((httpMethod == "post" || httpMethod == "put") ? "request" : param.Name.ToCamelCase())}");
             }
 
             string returnType = endpoint.ReturnType == "void" ? "Task" : $"Task<{endpoint.ReturnType}>";
@@ -282,6 +270,44 @@ public static class CodeGeneratoUtility
         }
     }
 
+    private static List<ParameterInfo> ProcessArrayParameters(List<ParameterInfo> parameters)
+    {
+        var result = new List<ParameterInfo>();
+        var arrayGroups = new Dictionary<string, List<ParameterInfo>>();
+
+        foreach (var param in parameters)
+        {
+            if (param.Name.Contains("[0]."))
+            {
+                string modelName = param.Name.Split('[', ']').First();
+
+                if (!arrayGroups.ContainsKey(modelName))
+                    arrayGroups[modelName] = [];
+
+                arrayGroups[modelName].Add(param);
+            }
+            else
+            {
+                result.Add(param);
+            }
+        }
+
+        foreach (var group in arrayGroups)
+        {
+            string modelName = group.Key.ToPascalCase() + "Request";
+            result.Add(new ParameterInfo
+            {
+                Name = group.Key.ToCamelCase(),
+                Type = $"List<{modelName}>",
+                In = "body",
+                Required = group.Value.Any(p => p.Required),
+                Description = $"List of {modelName}"
+            });
+        }
+
+        return result;
+    }
+
     public static void GenerateService(string serviceName, List<EndpointInfo> endpoints, string outputPath, string servicesNameSpace, string interfacesNameSpace, List<ModelNameSpaceInfo> modelNameSpaces)
     {
         var sb = new StringBuilder();
@@ -291,16 +317,11 @@ public static class CodeGeneratoUtility
         string implementationPath = Path.Combine(outputPath, "Services");
         Directory.CreateDirectory(implementationPath);
 
-        var usings = modelNameSpaces
-            .Where(x => endpoints.Any(e => x.Name.Equals(e.ReturnType, StringComparison.CurrentCultureIgnoreCase)))
-            .Select(x => $"{x.NameSpace}")
-            .ToList();
+        var usings = GeneralUtility.GetUsings(endpoints, modelNameSpaces);
 
         usings.Add("using SwagSharp.Api.Models;");
         usings.Add($"using {interfacesNameSpace};");
         usings.Add("using SwagSharp.Api.Contracts.Services;");
-
-        usings = [.. usings.Distinct().OrderBy(x => x.Length)];
 
         foreach (var item in usings)
             sb.AppendLine(item);

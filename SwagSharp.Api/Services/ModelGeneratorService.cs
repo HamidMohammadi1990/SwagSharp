@@ -57,7 +57,7 @@ public class ModelGeneratorService : IModelGeneratorService
     {
         if (definition.IsEnumDefinition())
         {
-            string enumCode = CodeGeneratoUtility.GenerateEnumClass(modelName, definition, modelsNameSpace, pluralModelName);
+            string enumCode = CodeGeneratoUtility.GenerateEnum(modelName, definition, modelsNameSpace, pluralModelName);
             await FileUtility.WriteFileAsync(categoryPath, $"{modelName}.cs", enumCode);
             Console.WriteLine($"  ✓ {modelName} (Enum)");
 
