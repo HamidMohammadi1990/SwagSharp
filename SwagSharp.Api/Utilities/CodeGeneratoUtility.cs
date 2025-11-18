@@ -1,9 +1,8 @@
-﻿using SwagSharp.Api.DTOs;
-using SwagSharp.Api.Extensions;
-using SwagSharp.Api.Models;
-using System;
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
+using SwagSharp.Api.DTOs;
+using SwagSharp.Api.Models;
+using SwagSharp.Api.Extensions;
 using System.Text.RegularExpressions;
 
 namespace SwagSharp.Api.Utilities;
@@ -345,7 +344,7 @@ public static class CodeGeneratoUtility
             string methodImplementation = GenerateMethodImplementation(endpoint);
             if (!string.IsNullOrEmpty(methodImplementation))
             {
-                sb.AppendLine($"        {methodImplementation}");
+                sb.AppendLine("        " + methodImplementation + "");
 
                 if (endpoints.LastIndexOf(endpoint) != -1)
                     sb.AppendLine();
@@ -380,18 +379,15 @@ public static class CodeGeneratoUtility
 
             if (!string.IsNullOrEmpty(endpoint.Summary))
             {
-                sb.AppendLine("    /// <summary>");
+                sb.AppendLine("/// <summary>");
                 sb.AppendLine($"    /// {endpoint.Summary}");
                 sb.AppendLine("    /// </summary>");
             }
 
             sb.AppendLine($"    public async {returnType} {cleanOperationId}Async({parameterWithTypeString})");
-            sb.AppendLine("    {");
 
             string clientCall = GenerateClientCall(endpoint);
-            sb.AppendLine($"        return {clientCall};");
-
-            sb.Append("    }");
+            sb.AppendLine("        => " + clientCall + ";");
 
             return sb.ToString();
         }
@@ -407,10 +403,7 @@ public static class CodeGeneratoUtility
         string methodName = GetClientMethodName(endpoint.HttpMethod);
         string url = BuildUrl(endpoint);
 
-        // تشخیص نوع Generic parameters
         string genericParameters = GetGenericParameters(endpoint);
-
-        // ساخت پارامترهای متد
         string methodParameters = BuildMethodParameters(endpoint, url);
 
         return $"await cBaasClientService.{methodName}{genericParameters}({methodParameters})";
@@ -419,16 +412,13 @@ public static class CodeGeneratoUtility
     private static string BuildUrl(EndpointInfo endpoint)
     {
         string url = CleanUrl(endpoint.Url);
-
-        // جایگزینی پارامترهای path
         var pathParams = endpoint.Parameters.Where(p => p.In == "path");
         foreach (var param in pathParams)
         {
             url = url.Replace($"{{{param.Name}}}", $"{{{param.Name.ToCamelCase()}}}");
         }
 
-        // اضافه کردن query parameters برای GET
-        if (endpoint.HttpMethod.ToLower() == "get")
+        if (endpoint.HttpMethod.Equals("get", StringComparison.CurrentCultureIgnoreCase))
         {
             var queryParams = endpoint.Parameters.Where(p => p.In == "query");
             if (queryParams.Any())
@@ -437,7 +427,7 @@ public static class CodeGeneratoUtility
             }
         }
 
-        return $"$\"{url}\"";
+        return url;
     }
 
     private static string CleanUrl(string url)
@@ -447,27 +437,32 @@ public static class CodeGeneratoUtility
 
     private static string GetGenericParameters(EndpointInfo endpoint)
     {
-        if (endpoint.HttpMethod.ToLower() == "get")
+        if (endpoint.HttpMethod.Equals("get", StringComparison.CurrentCultureIgnoreCase))
         {
             if (endpoint.ReturnType != "void" && endpoint.ReturnType != "Task")
             {
                 return $"<{endpoint.ReturnType}>";
             }
         }
-        else if (endpoint.HttpMethod.ToLower() == "post" || endpoint.HttpMethod.ToLower() == "put")
+        else if (endpoint.HttpMethod.Equals("post", StringComparison.CurrentCultureIgnoreCase) ||
+                 endpoint.HttpMethod.Equals("put", StringComparison.CurrentCultureIgnoreCase))
         {
             var bodyParam = endpoint.Parameters.FirstOrDefault(p => p.In == "body");
-            if (bodyParam != null && endpoint.ReturnType != "void" && endpoint.ReturnType != "Task")
+            if (bodyParam is not null && endpoint.Parameters.Count == 1 && endpoint.ReturnType != "void" && endpoint.ReturnType != "Task")
             {
                 return $"<{bodyParam.Type}, {endpoint.ReturnType}>";
             }
-            else if (bodyParam != null)
+            else if (bodyParam is not null && endpoint.Parameters.Count == 1)
             {
                 return $"<{bodyParam.Type}, bool>";
             }
-            else if (endpoint.ReturnType != "void" && endpoint.ReturnType != "Task")
+            else if (endpoint.ReturnType != "void" && endpoint.ReturnType != "Task" && endpoint.Parameters.Count > 1)
             {
-                return $"<{endpoint.ReturnType}>";
+                return $"<object, {endpoint.ReturnType}>";
+            }
+            else if (bodyParam is null && endpoint.Parameters.Count > 1 && endpoint.ReturnType == "void")
+            {
+                return $"<object, bool>";
             }
         }
 
@@ -476,14 +471,37 @@ public static class CodeGeneratoUtility
 
     private static string BuildMethodParameters(EndpointInfo endpoint, string url)
     {
-        var parameters = new List<string> { url };
+        var parameters = new List<string>();
 
-        // برای POST و PUT، پارامتر body را اضافه کن
-        if (endpoint.HttpMethod.ToLower() == "post" || endpoint.HttpMethod.ToLower() == "put")
+        if (endpoint.HttpMethod.Equals("post", StringComparison.CurrentCultureIgnoreCase) ||
+            endpoint.HttpMethod.Equals("put", StringComparison.CurrentCultureIgnoreCase))
         {
             var bodyParam = endpoint.Parameters.FirstOrDefault(p => p.In == "body");
             if (bodyParam != null)
+            {
+                parameters.Add($"$\"{url}\"");
                 parameters.Add("request");
+            }
+
+            if (endpoint.Parameters.All(x => x.In == "query"))
+            {
+                var queries = endpoint.Parameters
+                    .Select(x => $"{x.Name}={{{x.Name}}}")
+                    .ToList();
+
+                string finalUrl = queries.Count > 0
+                        ? "$\"" + $"{url}?" + string.Join("&", queries) + "\""
+                        : $"$\"{url}\"";
+
+                parameters.Add(finalUrl);
+                parameters.Add("null");
+
+                return string.Join(", ", parameters);
+            }
+        }
+        else
+        {
+            parameters.Add($"$\"{url}\"");
         }
 
         return string.Join(", ", parameters);
