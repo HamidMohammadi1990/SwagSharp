@@ -26,3 +26,27 @@ A powerful .NET 8.0 tool for automatically generating C# services, models, and H
 - **Generic Types** - Proper generic constraints and type resolution
 
 ## 📦 Project Structure
+
+
+## 🚀 Quick Start
+
+### Prerequisites
+- .NET 8.0 SDK
+- Swagger/OpenAPI 2.0 or 3.0 file
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/your-username/SwagSharp.git
+cd SwagSharp
+
+# Restore dependencies
+dotnet restore
+
+# Build the project
+dotnet build
+
+# Run the Web API
+cd SwagSharp.Web
+dotnet run
